@@ -25,20 +25,20 @@ Before installing this agent, you need to install PHP-Extension(named otel_instr
 #### Troubleshoot:-
 While installing PHP-Extension:
 * If you are facing `pecl:command not found`, then you need to run follow cmd:
-  ```
+  ```shell
   sudo apt-get update
   apt-get install php-pear php8.1-dev
   ```
 * If you are facing any kind of broken dependencies issues like: `libpcre2-dev : Depends: libpcre2-8-0 / libpcre2-16-0 / libpcre2-32-0`, then you need to run follow cmd:
-  ```
+  ```shell
   sudo apt --fix-broken install
   ```
 * If you are facing `ERROR: 'phpize' failed`, then you need to run follow cmd:
-  ```
+  ```shell
   sudo apt-get update
   sudo apt-get install php8.1-dev
   ```
-  ```
+  ```shell
   sudo apt-get update
   sudo pecl channel-update pecl.php.net
   ```
@@ -46,7 +46,7 @@ While installing PHP-Extension:
 ### Step 1: Install APM-PHP package
 
 Run below command in your terminal to install Middleware's APM-PHP package.
-```
+```shell
 composer require middleware/agent-apm-php
 ```
 
@@ -54,124 +54,46 @@ composer require middleware/agent-apm-php
 
 Add these lines given below at the very start of your project.
 
-```
+```php
 require 'vendor/autoload.php';
 use Middleware\AgentApmPhp\MwTracker;
 ```
 
 ### Step 3: Use APM Collector & Start the Tracing-scope
+To proceed further you need to decide whether you want to proceed with the manual or auto instrumentation. Here are steps mentioned for each:
 
-By using the APM Collector, you will start tracing-scope before your code, Also you need to register your hooks along with initial declaration. 
-
-In each hook, you need to define your Classes & Functions name, so whenever they run, agent will track them auto.
-
+- **Auto Instrumentation**
+If you want to automatically track the performance and behavior of a function, you can do so by adding the following code to it:
+```php
+$tracker->instrumentFunction(<CLASS_NAME>::class,"<FUNCTION_NAME>");
 ```
-$tracker = new MwTracker('<PROJECT-NAME>', '<SERVICE-NAME>');
-$tracker->preTrack();
-
-$tracker->registerHook('<CLASS-NAME-1>', '<FUNCTION-NAME-1>', [
-    'custom.attr1' => 'value1',
-    'custom.attr2' => 'value2',
+You can also use custom attributes to instrument functions. This allows you to specify additional information about the function, such as its purpose, or dependencies.
+```php
+$tracker->instrumentFunction(<CLASS_NAME>::class,"<FUNCTION_NAME>",[
+		'custom.attr1' => 'custom.val1',
+		'custom.attr2' => 'custom.val2',
 ]);
-$tracker->registerHook('<CLASS-NAME-2>', '<FUNCTION-NAME-2>');
-
 ```
+***NOTE***: Only non static functions can be auto instrumented. 
 
-### Step 4 : End the Tracing-scope
-
-After your code-flow, you need to end the tracing scope, so that agent can send the data to Middleware's APM dashboard.
-
+- **Manual Instrumentation**
+To manually instrument a function, register a hook using the following function:
+```php
+$tracker->registerHook('<CLASS_NAME>', '<FUNCTION_NAME>');
 ```
-$tracker->postTrack();
-```
-
-### Step 5 : To enable Logging feature
-
-If you want to enable Logging feature along with tracing in your project, then you can use below code snippet.
-
-  ```
-   $tracker->warn("this is warning log.");
-   $tracker->error("this is error log.");
-   $tracker->info("this is info log.");
-   $tracker->debug("this is debug log.");
-   ```
-
-### Final code snippet will be:
-
-```
-<?php
-require 'vendor/autoload.php';
-use Middleware\AgentApmPhp\MwTracker;
-
-$tracker = new MwTracker('<PROJECT-NAME>', '<SERVICE-NAME>');
-$tracker->preTrack();
-$tracker->registerHook('<CLASS-NAME-1>', '<FUNCTION-NAME-1>', [
-    'custom.attr1' => 'value1',
-    'custom.attr2' => 'value2',
+Similar to auto instrumentation we can use custom attributes here as well:
+```php
+$tracker->registerHook('<CLASS_NAME>', '<FUNCTION_NAME>',[
+		'custom.attr1' => 'custom.val1',
+		'custom.attr2' => 'custom.val2',
 ]);
-$tracker->registerHook('<CLASS-NAME-2>', '<FUNCTION-NAME-2>');
-
-$tracker->info("this is info log.");
-
-// ----
-// Your code goes here.
-// ----
-
-$tracker->postTrack();
 ```
-
-### Sample Code:
+## Logging
+Custom logs are also available. You can use them by calling the mentioned function for different types of logs.
+```php
+$tracker->warn("<CUSTOM_MESSAGE>"); 	//Warning Log
+$tracker->error("<CUSTOM_MESSAGE>"); 	//Error Log
+$tracker->info("<CUSTOM_MESSAGE>"); 	//Info Log
+$tracker->debug("<CUSTOM_MESSAGE>"); 	//Debug Log
 ```
-<?php
-require 'vendor/autoload.php';
-use Middleware\AgentApmPhp\MwTracker;
-
-$tracker = new MwTracker('DemoProject', 'PrintService');
-$tracker->preTrack();
-$tracker->registerHook('DemoClass', 'runCode', [
-    'code.column' => '12',
-    'net.host.name' => 'localhost',
-    'db.name' => 'users',
-    'custom.attr1' => 'value1',
-]);
-$tracker->registerHook('DoThings', 'printString');
-
-$tracker->info("this is info log.");
-
-class DoThings {
-    public static function printString($str): void {
-        // sleep(1);
-        global $tracker;
-        $tracker->warn("this is warning log, but from inner function.");
-        
-        echo $str . PHP_EOL;
-    }
-}
-
-class DemoClass {
-    public static function runCode(): void {
-        DoThings::printString('Hello World!');
-    }
-}
-
-DemoClass::runCode();
-
-$tracker->postTrack();
-```
-
----------------------
-
-## Note for APM inside Kubernetes
-
-If you are using APM in a Kubernetes cluster make sure to follow these 2 steps:
-
-### Step 1 : Find your Middleware Service namespace
-For older setup, your "mw-service" can be inside "mw-agent-ns-{FIRST-5-LETTERS-OF-API-KEY}" namespace
-
-For newer setup, we simplified the namespace name to "mw-agent-ns"
-
-### Step 2 : Set this ENV variable in your application deployment YAML
-```
-MW_AGENT_SERVICE=mw-service.NAMESPACE.svc.cluster.local
-```
-Please replace "NAMESPACE" with the correct value that you found from Step 1.
+You can use these functions throughout your code to generate meaningful logs. This will help you track and debug your code more effectively.
